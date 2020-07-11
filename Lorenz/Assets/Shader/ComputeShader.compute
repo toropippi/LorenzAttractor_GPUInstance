@@ -1,0 +1,50 @@
+﻿#pragma kernel Lorenz
+#pragma kernel BufInit
+
+//OpenCLに移植するときはfloat3が使えないので注意
+RWStructuredBuffer<double3> posBuffer;
+#define DELTA_TIME (0.0001)
+#define LOOPNUM (128)
+
+
+//簡易ランダム
+uint wang_hash(uint seed)
+{
+	seed = (seed ^ 61) ^ (seed >> 16);
+	seed *= 9;
+	seed = seed ^ (seed >> 4);
+	seed *= 0x27d4eb2d;
+	seed = seed ^ (seed >> 15);
+	return seed;
+}
+
+//ランダム位置に初期値を置く
+[numthreads(64, 1, 1)]
+void BufInit(uint id : SV_DispatchThreadID)
+{
+	double3 pos;
+	uint r = wang_hash(id * 1847483629);
+	pos.x = 0.005 * (r % 1024) - 1.5;
+	r /= 1024;
+	pos.y = 0.005 * (r % 1024) - 3.5;
+	r /= 1024;
+	pos.z = 0.005 * (r % 1024) + 23.0;
+	posBuffer[id] = pos;
+}
+
+
+[numthreads(64,1,1)]
+void Lorenz(uint id : SV_DispatchThreadID)
+{
+	double3 pos = posBuffer[id];
+	double3 pos_after;
+	for (int i = 0; i < LOOPNUM; i++) 
+	{
+		pos_after.x = pos.x + DELTA_TIME * (-10.0 * pos.x + 10.0 * pos.y);
+		pos_after.y = pos.y + DELTA_TIME * (-pos.x * pos.z + 28.0 * pos.x - pos.y);
+		pos_after.z = pos.z + DELTA_TIME * (pos.x * pos.y - 8.0 * pos.z / 3.0);
+		pos = pos_after;
+	}
+
+	posBuffer[id] = pos_after;
+}
