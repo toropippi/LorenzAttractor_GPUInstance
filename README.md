@@ -1,0 +1,2 @@
+# LorenzAttractor_GPUInstance
+ パーティクル座標計算と描画をＧＰＵで完結させるサンプル
